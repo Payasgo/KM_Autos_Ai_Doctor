@@ -70,8 +70,8 @@ class _HomeScreenState extends State<HomeScreen> {
               onTap: () => _pick(ImageSource.gallery),
             ),
             const SizedBox(height: 22),
-            Card(
-              child: const Padding(
+            const Card(
+              child: Padding(
                 padding: EdgeInsets.all(16),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
