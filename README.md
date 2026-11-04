@@ -1,97 +1,75 @@
-# AI Car Doctor — Cross-platform MVP
+# AI Car Doctor — Flutter + FastAPI
 
-Flutter mobile app (Android + iOS) with a FastAPI backend. Supports live camera capture, gallery uploads, scan reports, and an optional YOLOv8/YOLO11 detection adapter.
+Cross-platform Android/iOS app for preliminary engine-bay visual screening. It supports camera capture, gallery upload, and a FastAPI image inspection endpoint.
 
-## What works in this MVP
-- Open a live camera preview, capture an engine-bay photo, or select an existing image.
-- Upload it to the backend.
-- Receive a structured inspection report with severity, visible findings, limitations, and recommended next steps.
-- Optional custom YOLO model integration through `YOLO_WEIGHTS`.
-- Health endpoint and local Docker deployment.
+> This project is not a certified diagnostic device. Image-based component recognition does not establish mechanical faults, roadworthiness, or hidden sensor values. Keep the engine off and cool while taking photographs. Use an OBD-II scanner and qualified technician for diagnosis.
 
-## Important diagnostic limitation
-This MVP is an inspection assistant, not a certified vehicle diagnostic device. A photograph cannot establish hidden mechanical/electrical faults or measure oil pressure, compression, coolant temperature, charging voltage, or sensor values. Without a trained and validated model, the backend deliberately returns `model_status: "not_configured"` and does not invent detections. Treat all visual findings as preliminary. Never work around a running engine, hot/cooling system, moving belts/fans, high-voltage hybrid/EV components, or exposed electrical parts. Turn the engine off, remove the key, let hot parts cool, and seek a qualified technician for safety-critical concerns.
+## Backend (Windows PowerShell)
 
-## Architecture
-```text
-ai_car_doctor/
-├── mobile/                 # Flutter Android/iOS app
-│   ├── lib/
-│   ├── android/
-│   └── ios/
-├── backend/                # FastAPI image upload + inference API
-│   ├── app/
-│   ├── tests/
-│   ├── requirements.txt
-│   └── Dockerfile
-├── model_training/         # Dataset/model setup notes
-└── docker-compose.yml
-```
-
-## 1. Run the backend
-Requirements: Python 3.10+.
-
-```bash
+```powershell
 cd backend
-python -m venv .venv
-# macOS/Linux:
-source .venv/bin/activate
-# Windows:
-# .venv\Scripts\activate
+py -3.11 -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install --upgrade pip
 pip install -r requirements.txt
-uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+python -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-Open `http://localhost:8000/docs` for interactive API docs and `http://localhost:8000/health` for health status.
+Verify `http://127.0.0.1:8000/health` and `http://127.0.0.1:8000/docs`. The API accepts JPG/PNG/WEBP up to 10 MB at `POST /api/v1/diagnose`. The health response reports whether the configured model can actually load.
 
-Optional detector:
-1. Train or obtain a model specifically validated for automotive engine-bay components/defects.
-2. Put weights at `backend/models/engine_inspection.pt` (or set `YOLO_WEIGHTS` to an absolute path).
-3. Install optional inference dependency: `pip install ultralytics`.
-4. Restart backend. The API will return model detections when the weights are available.
+Run backend tests from `backend`:
+```powershell
+python -m pytest -q
+```
 
-Do not use a generic object-detection model as a mechanical fault detector. The model's class names must correspond to your labeled dataset. A detected component is not proof that the component is faulty.
+## Flutter
 
-## 2. Run the Flutter app
-Install Flutter stable and platform tooling: https://docs.flutter.dev/get-started/install
-
-```bash
+```powershell
 cd mobile
 flutter pub get
 flutter run
 ```
 
-The app defaults to `http://10.0.2.2:8000` on Android emulator. Change the API URL in `mobile/lib/config.dart`:
+Configure the API address with `--dart-define=API_BASE_URL=...`:
 - Android emulator: `http://10.0.2.2:8000`
 - iOS simulator: `http://127.0.0.1:8000`
-- Physical phone: `http://YOUR_COMPUTER_LAN_IP:8000` (phone and computer must share Wi-Fi; allow port 8000 through firewall).
-For production, use HTTPS and a deployed backend URL.
+- Physical Android/iPhone on same Wi-Fi: `http://YOUR_COMPUTER_LAN_IP:8000`
 
-### Platform permissions
-Camera and photo library permission descriptions are included in `ios/Runner/Info.plist`. Android camera permission is declared in `android/app/src/main/AndroidManifest.xml`. If regenerating platform folders with Flutter, re-apply these permissions.
+Example:
+```powershell
+flutter run --dart-define=API_BASE_URL=http://192.168.1.10:8000
+```
+For production use HTTPS and a deployed backend.
 
-## 3. Docker
-From project root:
+## Dataset and model
+
+A custom model must be trained from data that matches its class names and task. The checked-in `backend/yolo26n.pt` is a generic starting checkpoint, **not** an automotive detector and not a fault-diagnosis model. Do not point `YOLO_WEIGHTS` at it and present its predictions as car findings.
+
+Dataset layout expected by `backend/automotive_dataset/data.yaml`:
+```
+backend/automotive_dataset/
+  data.yaml
+  images/{train,val,test}/
+  labels/{train,val,test}/
+```
+Use matching image/label basenames. YOLO detection labels must be five values per object: class_id x_center y_center width height (normalized 0–1). Polygon rows indicate segmentation-format annotations and must be exported/converted consistently before detection training. Check every split and class ID before training.
+
+Install training dependencies and run from repository root:
+```powershell
+pip install -r backend/requirements.txt
+python model_training/train.py --epochs 100 --device cpu
+```
+For an NVIDIA CUDA GPU use `--device 0`. CPU training may take a long time. Training produces a best checkpoint under `runs/train/automotive_parts/weights/best.pt`; validate per-class metrics and real-world false negatives before deployment. Copy validated weights to `backend/models/engine_inspection.pt`.
+
+The example component dataset recognises parts only. It cannot identify faults unless a separate defect dataset and validated defect classes are developed.
+
+## Docker
+
 ```bash
 docker compose up --build
 ```
+Place validated weights at `backend/models/engine_inspection.pt` for the configured volume mount.
 
-## API
-`POST /api/v1/diagnose` multipart form:
-- `image`: JPG/PNG/WEBP image
-- `vehicle_make` (optional)
-- `vehicle_model` (optional)
-- `vehicle_year` (optional)
+## Safety and production
 
-`GET /health`
-
-## Model training
-See `model_training/README.md`. You need a legally usable, consented dataset with labeled engine components and separately labeled visible defects. Include normal examples and diverse makes, model years, lighting, angles, and engine layouts. Split by vehicle (not near-duplicate images) into train/validation/test. Report per-class precision/recall and false-negative rates. Do not deploy until independently validated in realistic conditions.
-
-## Production checklist
-- HTTPS, authentication, rate limiting, upload size limits, malware scanning, and retention/deletion policy.
-- Explicit user consent before uploading images; strip EXIF/location metadata.
-- Validate model performance by vehicle class, lighting, camera, and region.
-- Human review and disclaimers for safety-critical results.
-- Add OBD-II adapter support using a tested Bluetooth LE/Classic adapter and standardized PIDs/DTCs; do not infer live sensor values from images.
-- Add crash reporting, privacy policy, terms, and app-store compliance.
+Use HTTPS, authentication, rate limiting, consent, image retention/deletion controls, and platform privacy disclosures before public deployment. The current camera path captures a still frame for server analysis; it is not continuous live AI video scanning.
