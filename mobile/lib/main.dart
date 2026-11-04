@@ -16,7 +16,7 @@ class CarDoctorApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: seed, brightness: Brightness.dark),
         scaffoldBackgroundColor: const Color(0xFF101820),
         useMaterial3: true,
-        cardTheme: CardTheme(
+        cardTheme: CardThemeData(
           color: const Color(0xFF1A2732),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
         ),

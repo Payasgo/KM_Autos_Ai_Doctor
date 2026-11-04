@@ -4,6 +4,7 @@ services:
     ports:
       - "8000:8000"
     environment:
-      - YOLO_WEIGHTS=/models/engine_inspection.pt
+      YOLO_WEIGHTS: /models/engine_inspection.pt
     volumes:
       - ./backend/models:/models:ro
+    restart: unless-stopped

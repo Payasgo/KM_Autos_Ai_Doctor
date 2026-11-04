@@ -3,5 +3,7 @@ uvicorn[standard]>=0.27,<1
 python-multipart>=0.0.9
 Pillow>=10.0
 pydantic>=2.6
-# Optional: install separately after supplying validated weights:
-# ultralytics>=8.2
+# Optional for validated custom YOLO weights:
+ultralytics>=8.2
+pytest>=8.0
+httpx>=0.27
