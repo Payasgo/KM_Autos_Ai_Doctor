@@ -1,0 +1,18 @@
+# Dataset root is this directory. Keep image and label basenames identical.
+path: .
+train: images/train
+val: images/val
+test: images/test
+
+# Replace these class names/IDs only if they exactly match your annotation export.
+nc: 9
+names:
+  0: Air intake
+  1: Battery
+  2: Brake oil
+  3: Collant
+  4: Fuse Box
+  5: Main Engine
+  6: Oil cap
+  7: Radiator
+  8: Sprinkler
