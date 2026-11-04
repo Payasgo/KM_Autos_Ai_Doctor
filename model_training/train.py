@@ -24,11 +24,13 @@ def main() -> None:
     parser.add_argument("--imgsz", type=int, default=640)
     parser.add_argument("--batch", type=int, default=8)
     parser.add_argument("--device", default="cpu")
-    parser.add_argument("--model", default="yolo26n.pt")
+    parser.add_argument("--model", default=str(ROOT / "backend" / "yolo26n.pt"))
     args = parser.parse_args()
 
     if not DATA.is_file():
         raise SystemExit(f"Dataset config not found: {DATA}")
+    if not Path(args.model).is_file():
+        raise SystemExit(f"Starting checkpoint not found: {args.model}")
     model = YOLO(args.model)
     model.train(
         data=str(DATA),
