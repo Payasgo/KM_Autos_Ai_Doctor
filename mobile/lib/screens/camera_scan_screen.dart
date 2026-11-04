@@ -143,7 +143,9 @@ class _CameraScanScreenState extends State<CameraScanScreen>
   Future<void> _capture() async {
     final current = controller;
     if (current == null || !current.value.isInitialized ||
-        capturing || analyzingFrame) return;
+        capturing || analyzingFrame) {
+      return;
+    }
     _scanTimer?.cancel();
     setState(() => capturing = true);
     try {
