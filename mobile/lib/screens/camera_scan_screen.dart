@@ -26,6 +26,8 @@ class _CameraScanScreenState extends State<CameraScanScreen>
   String scanMessage = 'Starting camera…';
   List<dynamic> detections = [];
   List<dynamic> qualityNotes = [];
+  int frameWidth = 0;
+  int frameHeight = 0;
 
   @override
   void initState() {
@@ -95,9 +97,12 @@ class _CameraScanScreenState extends State<CameraScanScreen>
       if (!mounted) return;
       final rawDetections = result['component_detections'];
       final rawNotes = result['quality_notes'];
+      final rawImage = result['image'];
       setState(() {
         detections = rawDetections is List ? rawDetections : [];
         qualityNotes = rawNotes is List ? rawNotes : [];
+        frameWidth = rawImage is Map ? (rawImage['width'] as num?)?.toInt() ?? 0 : 0;
+        frameHeight = rawImage is Map ? (rawImage['height'] as num?)?.toInt() ?? 0 : 0;
         final status = result['model_status']?.toString() ?? 'unknown';
         scanMessage = status == 'not_configured'
             ? 'Camera is scanning, but an automotive model is not installed on the server.'
@@ -193,7 +198,21 @@ class _CameraScanScreenState extends State<CameraScanScreen>
                       : current != null && current.value.isInitialized
                           ? AspectRatio(
                               aspectRatio: current.value.aspectRatio,
-                              child: CameraPreview(current),
+                              child: Stack(
+                                fit: StackFit.expand,
+                                children: [
+                                  CameraPreview(current),
+                                  IgnorePointer(
+                                    child: CustomPaint(
+                                      painter: DetectionBoxPainter(
+                                        detections: detections,
+                                        imageWidth: frameWidth,
+                                        imageHeight: frameHeight,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
                             )
                           : const Text('Camera unavailable. Reopen this screen to retry.'),
             ),
@@ -245,7 +264,7 @@ class _CameraScanScreenState extends State<CameraScanScreen>
                 const SizedBox(height: 8),
                 const Text(
                   'Frames are checked about every 3 seconds. Keep the engine OFF. '
-                  'This is component recognition, not fault diagnosis. No bounding-box overlay is shown yet.',
+                  'Boxes show model-detected components only; they are not confirmed faults. Keep the engine OFF.',
                   style: TextStyle(fontSize: 12),
                 ),
                 const SizedBox(height: 12),
@@ -266,4 +285,85 @@ class _CameraScanScreenState extends State<CameraScanScreen>
       ),
     );
   }
+}
+ 
+class DetectionBoxPainter extends CustomPainter {
+  DetectionBoxPainter({
+    required this.detections,
+    required this.imageWidth,
+    required this.imageHeight,
+  });
+
+  final List<dynamic> detections;
+  final int imageWidth;
+  final int imageHeight;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (imageWidth <= 0 || imageHeight <= 0 || size.isEmpty) return;
+    final scaleX = size.width / imageWidth;
+    final scaleY = size.height / imageHeight;
+    final scale = scaleX > scaleY ? scaleX : scaleY;
+    final dx = (size.width - imageWidth * scale) / 2;
+    final dy = (size.height - imageHeight * scale) / 2;
+    final bounds = Offset.zero & size;
+    final boxPaint = Paint()
+      ..color = const Color(0xFF00E676)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2.5;
+
+    canvas.save();
+    canvas.clipRect(bounds);
+    for (final item in detections) {
+      if (item is! Map) continue;
+      final rawBox = item['box_xyxy'];
+      if (rawBox is! List || rawBox.length != 4 ||
+          rawBox.any((value) => value is! num)) continue;
+
+      final rect = Rect.fromLTRB(
+        (rawBox[0] as num).toDouble() * scale + dx,
+        (rawBox[1] as num).toDouble() * scale + dy,
+        (rawBox[2] as num).toDouble() * scale + dx,
+        (rawBox[3] as num).toDouble() * scale + dy,
+      ).intersect(bounds);
+      if (rect.width < 2 || rect.height < 2) continue;
+      canvas.drawRect(rect, boxPaint);
+
+      final confidence = item['confidence'];
+      final percent = confidence is num ? ' ${(confidence * 100).round()}%' : '';
+      final label = item['label']?.toString() ?? 'Component';
+      final textPainter = TextPainter(
+        text: TextSpan(
+          text: '$label$percent',
+          style: const TextStyle(
+            color: Colors.black,
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        textDirection: TextDirection.ltr,
+        maxLines: 1,
+      )..layout(maxWidth: size.width < 240 ? size.width : 240);
+
+      final labelTop = (rect.top - textPainter.height - 5).clamp(0.0, size.height);
+      final labelRect = Rect.fromLTWH(
+        rect.left,
+        labelTop,
+        textPainter.width + 10,
+        textPainter.height + 4,
+      ).intersect(bounds);
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(labelRect, const Radius.circular(3)),
+        Paint()..color = const Color(0xFF00E676),
+      );
+      textPainter.paint(canvas, Offset(labelRect.left + 5, labelRect.top + 2));
+    }
+    canvas.restore();
+  }
+
+  @override
+  bool shouldRepaint(covariant DetectionBoxPainter oldDelegate) =>
+      oldDelegate.detections != detections ||
+      oldDelegate.imageWidth != imageWidth ||
+      oldDelegate.imageHeight != imageHeight;
 }
