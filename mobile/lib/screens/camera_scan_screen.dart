@@ -315,10 +315,14 @@ class DetectionBoxPainter extends CustomPainter {
     canvas.save();
     canvas.clipRect(bounds);
     for (final item in detections) {
-      if (item is! Map) continue;
+      if (item is! Map) {
+        continue;
+      }
       final rawBox = item['box_xyxy'];
       if (rawBox is! List || rawBox.length != 4 ||
-          rawBox.any((value) => value is! num)) continue;
+          rawBox.any((value) => value is! num)) {
+        continue;
+      }
 
       final rect = Rect.fromLTRB(
         (rawBox[0] as num).toDouble() * scale + dx,
@@ -326,7 +330,9 @@ class DetectionBoxPainter extends CustomPainter {
         (rawBox[2] as num).toDouble() * scale + dx,
         (rawBox[3] as num).toDouble() * scale + dy,
       ).intersect(bounds);
-      if (rect.width < 2 || rect.height < 2) continue;
+      if (rect.width < 2 || rect.height < 2) {
+        continue;
+      }
       canvas.drawRect(rect, boxPaint);
 
       final confidence = item['confidence'];
