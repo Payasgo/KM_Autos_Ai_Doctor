@@ -71,17 +71,20 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             const SizedBox(height: 22),
             Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  const Row(children: [
-                    Icon(Icons.health_and_safety_outlined, color: Colors.amber),
-                    SizedBox(width: 8),
-                    Text('Safety first', style: TextStyle(fontWeight: FontWeight.bold)),
-                  ]),
-                  const SizedBox(height: 8),
-                  const Text('Switch the engine off, remove the key, and let hot parts cool before taking photos. Never touch belts, fans, hot components, or high-voltage EV parts.'),
-                ]),
+              child: const Padding(
+                padding: EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(children: [
+                      Icon(Icons.health_and_safety_outlined, color: Colors.amber),
+                      SizedBox(width: 8),
+                      Text('Safety first', style: TextStyle(fontWeight: FontWeight.bold)),
+                    ]),
+                    SizedBox(height: 8),
+                    Text('Switch the engine off, remove the key, and let hot parts cool before taking photos. Never touch belts, fans, hot components, or high-voltage EV parts.'),
+                  ],
+                ),
               ),
             ),
             const SizedBox(height: 12),
