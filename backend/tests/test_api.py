@@ -46,3 +46,23 @@ def test_accepts_valid_image_without_model():
     assert payload["image"] == {"width": 320, "height": 240}
     assert payload["severity"] == "unknown"
     assert "disclaimer" in payload
+
+
+def test_live_frame_detection_without_model():
+    response = client.post(
+        "/api/v1/detect-frame",
+        files={"image": ("frame.jpg", _jpeg_bytes(), "image/jpeg")},
+    )
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["model_status"] == "not_configured"
+    assert payload["component_detections"] == []
+    assert payload["image"] == {"width": 320, "height": 240}
+
+
+def test_live_frame_rejects_invalid_image():
+    response = client.post(
+        "/api/v1/detect-frame",
+        files={"image": ("frame.jpg", b"invalid", "image/jpeg")},
+    )
+    assert response.status_code == 400
