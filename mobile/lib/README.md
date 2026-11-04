@@ -1,0 +1,1 @@
+Run `flutter create . --platforms=android,ios` inside this directory if platform scaffolding is not present. Then apply the Android manifest permissions and iOS Info.plist entries documented in the root README. Run `flutter pub get` and `flutter run`.

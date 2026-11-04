@@ -1,0 +1,5 @@
+Add these keys inside the top-level <dict> of ios/Runner/Info.plist:
+<key>NSCameraUsageDescription</key>
+<string>AI Car Doctor uses the camera to capture vehicle inspection photos.</string>
+<key>NSPhotoLibraryUsageDescription</key>
+<string>AI Car Doctor accesses selected photos for vehicle inspection.</string>

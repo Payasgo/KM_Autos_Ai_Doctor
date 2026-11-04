@@ -1,0 +1,9 @@
+services:
+  api:
+    build: ./backend
+    ports:
+      - "8000:8000"
+    environment:
+      - YOLO_WEIGHTS=/models/engine_inspection.pt
+    volumes:
+      - ./backend/models:/models:ro
